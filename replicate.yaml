@@ -1,0 +1,2 @@
+predict: predict.py
+image: r8.im/stability-ai/stable-diffusion-xl
