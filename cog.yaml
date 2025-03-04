@@ -6,6 +6,7 @@ build:
     - diffusers
     - transformers
     - safetensors
+    - accelerate  
 predict: "predict.py:Predictor"
 
 
