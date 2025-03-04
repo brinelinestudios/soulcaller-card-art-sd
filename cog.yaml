@@ -1,0 +1,9 @@
+build:
+  gpu: true  # Set to false if your model doesn't require a GPU
+  python_version: "3.10"
+  python_packages:
+    - torch
+    - diffusers
+    - transformers
+    - safetensors
+predict: "predict.py:Predictor"

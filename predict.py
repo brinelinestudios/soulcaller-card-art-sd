@@ -1,19 +1,19 @@
-import torch
 from diffusers import StableDiffusionXLPipeline
 from safetensors.torch import load_file
+import torch
 
-# Load the base SDXL model from Replicate's repository
+# Load the base SDXL model
 model_id = "stabilityai/stable-diffusion-xl-base-1.0"
 pipe = StableDiffusionXLPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
 pipe.to("cuda")
 
-# LoRA file (update this with the actual link to your LoRA)
-LORA_PATH = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/raw/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
+# Define the LoRA repository on Hugging Face
+LORA_REPO = "dennis-brinelinestudios/soulcaller-lora"
 
-# Load LoRA weights
-lora_weights = load_file(LORA_PATH)
+# Load LoRA weights from Hugging Face
+lora_weights = load_file(f"https://huggingface.co/{LORA_REPO}/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors")
 
-# Apply LoRA to the model
+# Apply LoRA weights to the model
 pipe.unet.load_state_dict(lora_weights, strict=False)
 
 # Function to run predictions
