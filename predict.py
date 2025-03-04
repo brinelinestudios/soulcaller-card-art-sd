@@ -7,11 +7,11 @@ model_id = "stabilityai/stable-diffusion-xl-base-1.0"
 pipe = StableDiffusionXLPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
 pipe.to("cuda")
 
-# Define the LoRA repository on Hugging Face
-LORA_REPO = "dennis-brinelinestudios/soulcaller-lora"
-
 # Load LoRA weights from Hugging Face
-lora_weights = load_file(f"https://huggingface.co/{LORA_REPO}/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors")
+LORA_PATH = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
+
+# Load LoRA weights properly
+lora_weights = load_file(LORA_PATH)
 
 # Apply LoRA weights to the model
 pipe.unet.load_state_dict(lora_weights, strict=False)
