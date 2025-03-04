@@ -7,3 +7,5 @@ build:
     - transformers
     - safetensors
 predict: "predict.py:Predictor"
+
+
