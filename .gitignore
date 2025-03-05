@@ -1,0 +1,22 @@
+# Ignore virtual environments
+venv/
+.Venv/
+env/
+.venv/
+
+# Ignore model weights and large files
+weights/
+*.safetensors
+
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore GitHub workflow cache files
+.github/workflows/*
+
+.cog/
+venv/
+weights/
+SDXL_Inkdrawing_Directors_Cut_E.safetensors
