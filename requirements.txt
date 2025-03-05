@@ -3,3 +3,4 @@ diffusers==0.25.0
 safetensors==0.3.3
 cog==0.8.3
 requests==2.31.0
+huggingface_hub==0.19.4

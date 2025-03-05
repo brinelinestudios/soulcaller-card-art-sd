@@ -1,24 +1,26 @@
 import os
 import requests
-from cog import BasePredictor, Input, Path  # Import Path for correct output formatting
+from cog import BasePredictor, Input, Path  # Ensure Path is used for returning files
 import torch
 from diffusers import StableDiffusionXLPipeline
 from safetensors.torch import load_file
-from huggingface_hub import hf_hub_download  # Correct import
+from huggingface_hub import snapshot_download  # Use snapshot_download to get the full model
 
 class Predictor(BasePredictor):
     def setup(self):
         """Load the base Stable Diffusion XL model and LoRA weights"""
         print("🔵 Setting up the model and LoRA weights...")
 
-        # Download model from Hugging Face using the updated method
-        print("🟡 Downloading model from Hugging Face...")
-        model_path = hf_hub_download(repo_id="stabilityai/stable-diffusion-xl-base-1.0", filename="model.safetensors")
-
+        # Download the full SDXL model directory
+        print("🟡 Downloading base model from Hugging Face...")
+        model_path = snapshot_download(repo_id="stabilityai/stable-diffusion-xl-base-1.0")
+        
         # Load base model
-        self.pipe = StableDiffusionXLPipeline.from_pretrained(model_path, torch_dtype=torch.float16)
+        self.pipe = StableDiffusionXLPipeline.from_pretrained(
+            model_path, torch_dtype=torch.float16
+        )
         self.pipe.to("cuda")
-        print("🟢 Model loaded successfully.")
+        print("🟢 Base model loaded successfully.")
 
         # Define LoRA weights URL and local path
         LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
@@ -39,10 +41,13 @@ class Predictor(BasePredictor):
         self.pipe.unet.load_state_dict(lora_weights, strict=False)
         print("✅ LoRA weights loaded successfully.")
 
-    def predict(self, prompt: str = Input(description="Prompt for image generation", default="A test image"),
-                steps: int = Input(description="Number of inference steps", default=30)) -> list[Path]:
+    def predict(
+        self,
+        prompt: str = Input(description="Prompt for image generation", default="A test image"),
+        steps: int = Input(description="Number of inference steps", default=30)
+    ) -> list[Path]:
         """
-        Run the image generation model with the given prompt and steps.
+        Generate an image based on the given prompt and number of steps.
         Returns a list containing the file path of the generated image.
         """
         print(f"🟡 Running inference with prompt: '{prompt}', steps: {steps}")
@@ -61,7 +66,7 @@ class Predictor(BasePredictor):
             output_image.save(output_path)  # Save image as PNG
             print(f"✅ Image saved at {output_path}")
 
-            # Check if the image was actually saved
+            # Ensure the image file exists
             if os.path.exists(output_path):
                 print("🟢 Image file confirmed to exist.")
             else:
