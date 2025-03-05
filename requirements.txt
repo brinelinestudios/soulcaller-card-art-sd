@@ -3,3 +3,4 @@ diffusers
 transformers
 safetensors
 accelerate
+requests
