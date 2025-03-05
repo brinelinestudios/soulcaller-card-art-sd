@@ -48,35 +48,35 @@ class Predictor(BasePredictor):
         self.pipe.unet.load_attn_procs(LORA_PATH)
         print("✅ LoRA weights loaded successfully.")
 
-    def predict(self, 
-                prompt: str = Input(description="Prompt for image generation", default="A test image"),
-                steps: int = Input(description="Number of inference steps", default=30)) -> list[str]:
-        """
-        Run the image generation model with the given prompt and steps.
-        Returns a **publicly accessible URL** of the generated image.
-        """
-        print(f"🟡 Running inference with prompt: '{prompt}', steps: {steps}")
+def predict(self, 
+            prompt: str = Input(description="Prompt for image generation", default="A test image"),
+            steps: int = Input(description="Number of inference steps", default=30)) -> list[str]:
+    """
+    Run the image generation model with the given prompt and steps.
+    Returns a **publicly accessible URL** of the generated image.
+    """
+    print(f"🟡 Running inference with prompt: '{prompt}', steps: {steps}")
 
-        try:
-            # Generate image
-            output = self.pipe(prompt, num_inference_steps=steps)
-            print("✅ Model executed successfully.")
+    try:
+        # Generate image
+        output = self.pipe(prompt, num_inference_steps=steps)
+        print("✅ Model executed successfully.")
 
-            # Extract image from pipeline output
-            output_image = output.images[0]
-            print("✅ Image extracted from model output.")
+        # Extract image from pipeline output
+        output_image = output.images[0]
+        print("✅ Image extracted from model output.")
 
-            # Define output path
-            output_path = "/tmp/output.png"
-            output_image.save(output_path)
-            print(f"✅ Image saved at {output_path}")
+        # Define output path
+        output_path = "/tmp/output.png"
+        output_image.save(output_path)
+        print(f"✅ Image saved at {output_path}")
 
-            # ✅ **UPLOAD IMAGE TO REPLICATE STORAGE**
-            uploaded_path = Path(output_path).upload()
-            print(f"🟢 Uploaded image: {uploaded_path}")
+        # ✅ **UPLOAD IMAGE TO REPLICATE STORAGE**
+        uploaded_path = Path(output_path).upload()
+        print(f"🟢 Uploaded image: {uploaded_path}")  # Debug: Ensure URL is generated
 
-            return [uploaded_path]  # Return the image URL
+        return [str(uploaded_path)]  # Convert Path to string explicitly
 
-        except Exception as e:
-            print(f"❌ Error during inference: {e}")
-            return []
+    except Exception as e:
+        print(f"❌ Error during inference: {e}")
+        return []
