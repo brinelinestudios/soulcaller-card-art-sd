@@ -1,32 +1,41 @@
 import os
 import requests
-from cog import BasePredictor, Input, Path  # Ensure Path is used for returning files
+from cog import BasePredictor, Input, Path
 import torch
 from diffusers import StableDiffusionXLPipeline
 from safetensors.torch import load_file
-from huggingface_hub import snapshot_download  # Use snapshot_download to get the full model
+from huggingface_hub import snapshot_download
 
 class Predictor(BasePredictor):
     def setup(self):
-        """Load the base Stable Diffusion XL model and LoRA weights"""
-        print("🔵 Setting up the model and LoRA weights...")
+        """Optimized Model Setup: Faster Boot, Lower Memory Usage"""
 
-        # Download the full SDXL model directory
-        print("🟡 Downloading base model from Hugging Face...")
-        model_path = snapshot_download(repo_id="stabilityai/stable-diffusion-xl-base-1.0")
-        
-        # Load base model
-        self.pipe = StableDiffusionXLPipeline.from_pretrained(
-            model_path, torch_dtype=torch.float16
-        )
-        self.pipe.to("cuda")
-        print("🟢 Base model loaded successfully.")
-
-        # Define LoRA weights URL and local path
-        LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
+        MODEL_CACHE = "./sdxl-model"
         LORA_PATH = "./SDXL_Inkdrawing_Directors_Cut_E.safetensors"
+        LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
 
-        # Download LoRA weights if not already present
+        # Load base model from cache or download
+        if not os.path.exists(MODEL_CACHE):
+            print("🟡 Downloading base model...")
+            model_path = snapshot_download(repo_id="stabilityai/stable-diffusion-xl-base-1.0", cache_dir=MODEL_CACHE)
+        else:
+            print("🟢 Using cached model:", MODEL_CACHE)
+            model_path = MODEL_CACHE
+
+        # Load pipeline with optimizations
+        self.pipe = StableDiffusionXLPipeline.from_pretrained(
+            model_path,
+            torch_dtype=torch.float16,
+            load_in_8bit=True,
+            safety_checker=None,
+            requires_safety_checker=False,
+            variant="fp16",
+        )
+        self.pipe.vae.enable_tiling()
+        self.pipe.to("cuda")
+        print("✅ Base model loaded successfully.")
+
+        # Download and load LoRA
         if not os.path.exists(LORA_PATH):
             print(f"🟡 Downloading LoRA weights from {LORA_URL}...")
             response = requests.get(LORA_URL, stream=True)
@@ -35,20 +44,16 @@ class Predictor(BasePredictor):
                     f.write(chunk)
             print("✅ LoRA weights downloaded.")
 
-        # Load the LoRA weights into the model
         print("🟡 Loading LoRA weights...")
-        lora_weights = load_file(LORA_PATH)
-        self.pipe.unet.load_state_dict(lora_weights, strict=False)
+        self.pipe.unet.load_attn_procs(LORA_PATH)
         print("✅ LoRA weights loaded successfully.")
 
-    def predict(
-        self,
-        prompt: str = Input(description="Prompt for image generation", default="A test image"),
-        steps: int = Input(description="Number of inference steps", default=30)
-    ) -> list[Path]:
+    def predict(self, 
+                prompt: str = Input(description="Prompt for image generation", default="A test image"),
+                steps: int = Input(description="Number of inference steps", default=30)) -> list[str]:
         """
-        Generate an image based on the given prompt and number of steps.
-        Returns a list containing the file path of the generated image.
+        Run the image generation model with the given prompt and steps.
+        Returns a **publicly accessible URL** of the generated image.
         """
         print(f"🟡 Running inference with prompt: '{prompt}', steps: {steps}")
 
@@ -63,17 +68,14 @@ class Predictor(BasePredictor):
 
             # Define output path
             output_path = "/tmp/output.png"
-            output_image.save(output_path)  # Save image as PNG
+            output_image.save(output_path)
             print(f"✅ Image saved at {output_path}")
 
-            # Ensure the image file exists
-            if os.path.exists(output_path):
-                print("🟢 Image file confirmed to exist.")
-            else:
-                print("❌ ERROR: Image file not found after saving!")
+            # ✅ **UPLOAD IMAGE TO REPLICATE STORAGE**
+            uploaded_path = Path(output_path).upload()
+            print(f"🟢 Uploaded image: {uploaded_path}")
 
-            # Return the image path as a list of Path objects (Replicate requirement)
-            return [Path(output_path)]
+            return [uploaded_path]  # Return the image URL
 
         except Exception as e:
             print(f"❌ Error during inference: {e}")
