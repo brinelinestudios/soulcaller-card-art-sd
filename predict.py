@@ -1,64 +1,74 @@
 import os
 import requests
-from cog import BasePredictor, Input
+from cog import BasePredictor, Input, Path  # Import Path for correct output formatting
 import torch
 from diffusers import StableDiffusionXLPipeline
 from safetensors.torch import load_file
 
 class Predictor(BasePredictor):
     def setup(self):
-        print("Loading model and LoRA weights...")
+        """Load the base Stable Diffusion XL model and LoRA weights"""
+        print("🔵 Setting up the model and LoRA weights...")
 
-        # Set model ID
+        # Set model ID and load base model
         self.model_id = "stabilityai/stable-diffusion-xl-base-1.0"
-        self.pipe = StableDiffusionXLPipeline.from_pretrained(self.model_id, torch_dtype=torch.float16)
+        self.pipe = StableDiffusionXLPipeline.from_pretrained(
+            self.model_id, torch_dtype=torch.float16
+        )
         self.pipe.to("cuda")
-        print("Model loaded successfully.")
+        print("🟢 Model loaded successfully.")
 
         # Define LoRA weights URL and local path
         LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
         LORA_PATH = "./SDXL_Inkdrawing_Directors_Cut_E.safetensors"
 
-        # Check if file exists, if not, download it
+        # Download LoRA weights if not already present
         if not os.path.exists(LORA_PATH):
-            print(f"Downloading LoRA weights from {LORA_URL}...")
+            print(f"🟡 Downloading LoRA weights from {LORA_URL}...")
             response = requests.get(LORA_URL, stream=True)
             with open(LORA_PATH, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            print("LoRA weights downloaded.")
+            print("✅ LoRA weights downloaded.")
 
-        # Load the LoRA weights from local file
-        print("Loading LoRA weights...")
+        # Load the LoRA weights into the model
+        print("🟡 Loading LoRA weights...")
         lora_weights = load_file(LORA_PATH)
         self.pipe.unet.load_state_dict(lora_weights, strict=False)
-        print("LoRA weights loaded.")
+        print("✅ LoRA weights loaded successfully.")
 
-    def predict(self, prompt: str = "A test image", steps: int = 30) -> str:
-        print(f"Running inference with prompt: {prompt}, steps: {steps}")
-        output_image = self.pipe(prompt, num_inference_steps=steps).images[0]
+    def predict(self, prompt: str = Input(description="Prompt for image generation", default="A test image"),
+                steps: int = Input(description="Number of inference steps", default=30)) -> list[Path]:
+        """
+        Run the image generation model with the given prompt and steps.
+        Returns a list containing the file path of the generated image.
+        """
+        print(f"🟡 Running inference with prompt: '{prompt}', steps: {steps}")
 
-        output_path = "/tmp/output.png"
-        output_image.save(output_path)
-        print(f"Image saved at {output_path}")
+        try:
+            # Generate image
+            output = self.pipe(prompt, num_inference_steps=steps)
+            print("✅ Model executed successfully.")
 
-        return output_path
+            # Extract image from pipeline output
+            output_image = output.images[0]
+            print("✅ Image extracted from model output.")
 
-def predict(self, prompt: str = "A test image", steps: int = 30) -> str:
-    print(f"🟡 Running inference with prompt: {prompt}, steps: {steps}")
+            # Define output path
+            output_path = "/tmp/output.png"
+            output_image.save(output_path)  # Save image as PNG
+            print(f"✅ Image saved at {output_path}")
 
-    try:
-        output = self.pipe(prompt, num_inference_steps=steps)  # Run model
-        print(f"🟢 Model output: {output}")  # Debug: Print full model output
+            # Check if the image was actually saved
+            if os.path.exists(output_path):
+                print("🟢 Image file confirmed to exist.")
+            else:
+                print("❌ ERROR: Image file not found after saving!")
 
-        output_image = output.images[0]  # Extract image
-        print("✅ Image generated successfully!")  # Debug: Confirm image exists
+            # Return the image path as a list of Path objects (Replicate requirement)
+            return [Path(output_path)]
 
-        output_path = "/tmp/output.png"
-        output_image.save(output_path)  # Save image
-        print(f"✅ Image saved at {output_path}")  # Debug: Confirm save success
+        except Exception as e:
+            print(f"❌ Error during inference: {e}")
+            return []
 
-        return output_path
-    except Exception as e:
-        print(f"❌ Error during inference: {e}")  # Debug: Print any errors
-        return "ERROR"

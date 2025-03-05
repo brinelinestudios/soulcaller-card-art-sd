@@ -1,12 +1,11 @@
 build:
-  gpu: true  # Set to false if your model doesn't require a GPU
-  python_version: "3.10"
+  gpu: true
+  python_version: "3.10"  # Ensure a supported Python version
   python_packages:
-    - torch
-    - diffusers
-    - transformers
-    - safetensors
-    - accelerate  
+    - torch==2.1.0
+    - diffusers==0.25.0
+    - safetensors==0.3.3
+    - cog==0.8.3
+    - requests==2.31.0
+
 predict: "predict.py:Predictor"
-
-
