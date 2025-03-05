@@ -1,5 +1,5 @@
-diffusers
 torch
+diffusers
 transformers
 safetensors
 accelerate
