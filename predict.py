@@ -12,8 +12,7 @@ class Predictor(BasePredictor):
         print("Model loaded successfully.")
 
         # Load LoRA weights
-        #LORA_PATH = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
-        LORA_PATH = "./SDXL_Inkdrawing_Directors_Cut_E.safetensors"
+        LORA_PATH = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
         print(f"Loading LoRA weights from {LORA_PATH}...")
         lora_weights = load_file(LORA_PATH)
         self.pipe.unet.load_state_dict(lora_weights, strict=False)
