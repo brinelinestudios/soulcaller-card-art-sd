@@ -1,4 +1,4 @@
-torch==2.1.0
+torch==2.2.0
 diffusers==0.25.0
 safetensors==0.3.3
 cog==0.8.3
