@@ -4,17 +4,19 @@ from cog import BasePredictor, Input, Path  # Import Path for correct output for
 import torch
 from diffusers import StableDiffusionXLPipeline
 from safetensors.torch import load_file
+from huggingface_hub import hf_hub_download  # Correct import
 
 class Predictor(BasePredictor):
     def setup(self):
         """Load the base Stable Diffusion XL model and LoRA weights"""
         print("🔵 Setting up the model and LoRA weights...")
 
-        # Set model ID and load base model
-        self.model_id = "stabilityai/stable-diffusion-xl-base-1.0"
-        self.pipe = StableDiffusionXLPipeline.from_pretrained(
-            self.model_id, torch_dtype=torch.float16
-        )
+        # Download model from Hugging Face using the updated method
+        print("🟡 Downloading model from Hugging Face...")
+        model_path = hf_hub_download(repo_id="stabilityai/stable-diffusion-xl-base-1.0", filename="model.safetensors")
+
+        # Load base model
+        self.pipe = StableDiffusionXLPipeline.from_pretrained(model_path, torch_dtype=torch.float16)
         self.pipe.to("cuda")
         print("🟢 Model loaded successfully.")
 
@@ -71,4 +73,3 @@ class Predictor(BasePredictor):
         except Exception as e:
             print(f"❌ Error during inference: {e}")
             return []
-
