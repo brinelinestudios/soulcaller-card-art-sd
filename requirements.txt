@@ -3,9 +3,9 @@ torch==2.1.2+cu121
 torchvision==0.16.2+cu121
 torchaudio==2.1.2+cu121
 diffusers==0.26.3
-transformers==4.34.0  # or upgrade to 4.36.0
-huggingface_hub==0.20.2
+transformers==4.34.0
+huggingface_hub==0.19.4
 accelerate==0.25.0
-tokenizers==0.14.0  # Downgrade to match transformers
+tokenizers==0.14.0
 safetensors==0.3.3
 protobuf==4.23.4
