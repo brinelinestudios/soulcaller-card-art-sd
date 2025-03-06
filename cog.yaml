@@ -9,6 +9,8 @@ build:
     - cog==0.8.3
     - requests==2.31.0
     - huggingface_hub==0.19.4
-     - numpy<2
+    - numpy<2
+    - transformers==4.36.2
+
 
 predict: "predict.py:Predictor"
