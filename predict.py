@@ -5,7 +5,8 @@ import time
 from cog import BasePredictor, Input, Path
 import torch
 from diffusers import StableDiffusionXLPipeline
-from transformers import AutoModel, LoraConfig
+from transformers import AutoModel
+from peft import LoraConfig
 
 class Predictor(BasePredictor):
     def setup(self):
