@@ -5,36 +5,21 @@ import time
 from cog import BasePredictor, Input, Path
 import torch
 from diffusers import StableDiffusionXLPipeline
-from diffusers import load_lora_weights
-from safetensors.torch import load_file
-from huggingface_hub import snapshot_download
+from transformers import AutoModel, LoraConfig
 
 class Predictor(BasePredictor):
     def setup(self):
         """Optimized Model Setup: Faster Boot, Lower Memory Usage"""
 
-        MODEL_CACHE = "./sdxl-model"
+        MODEL_NAME = "stabilityai/stable-diffusion-xl-base-1.0"
         LORA_PATH = "./SDXL_Inkdrawing_Directors_Cut_E.safetensors"
         LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
 
-        # Load base model from cache or download
-        if not os.path.exists(MODEL_CACHE):
-            print("🟡 Downloading base model...")
-            model_path = snapshot_download(repo_id="stabilityai/stable-diffusion-xl-base-1.0", cache_dir=MODEL_CACHE)
-        else:
-            print("🟢 Using cached model:", MODEL_CACHE)
-            model_path = MODEL_CACHE
-
-        # Load pipeline with optimizations
+        # Load base model
         self.pipe = StableDiffusionXLPipeline.from_pretrained(
-            model_path,
+            MODEL_NAME,
             torch_dtype=torch.float16,
-            load_in_8bit=True,
-            safety_checker=None,
-            requires_safety_checker=False,
-            variant="fp16",
         )
-        self.pipe.vae.enable_tiling()
         self.pipe.to("cuda")
         print("✅ Base model loaded successfully.")
 
@@ -47,16 +32,27 @@ class Predictor(BasePredictor):
                     f.write(chunk)
             print("✅ LoRA weights downloaded.")
         else:
-            print("Using cached lora:")
+            print("🟢 Using cached LoRA weights.")
 
         try:
-            print("🟡 Attempting to load LoRA weights...")
-            load_lora_into_pipeline(self.pipe, LORA_PATH)
+            print("🟡 Loading LoRA weights using transformers...")
+            lora_config = LoraConfig(
+                r=16,
+                lora_alpha=32,
+                target_modules=[AutoModel],
+                lora_dropout=0.1,
+                bias="none"
+            )
+
+            self.pipe = AutoModel.from_pretrained(
+                MODEL_NAME,
+                config=lora_config,
+                load_lora_weights=True
+            )
             print("✅ LoRA weights loaded successfully.")
-        except AttributeError as e:
+
+        except Exception as e:
             print(f"❌ LoRA loading failed: {e}")
-            print("🔍 Possible Causes: Mismatched LoRA file, incompatible Diffusers version, or missing keys.")
-            print("🔧 Try re-downloading or converting the LoRA file.")
 
     def predict(self, 
                 prompt: str = Input(description="Prompt for image generation", default="A test image"),
