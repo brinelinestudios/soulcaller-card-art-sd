@@ -1,11 +1,10 @@
 torch==2.1.2
 torchvision==0.16.2
 torchaudio==2.1.2
-diffusers==0.24.0
-safetensors==0.3.3
-cog==0.8.3
-requests==2.31.0
-huggingface_hub==0.19.4
-numpy<2
-transformers==4.36.0
+diffusers==0.24.0  # Use a stable version
+transformers==4.36.2  # Ensure this version works
 accelerate==0.25.0
+huggingface_hub==0.16.4  # This avoids the 'split_torch_state_dict_into_shards' issue
+safetensors==0.3.3
+protobuf==4.23.4  # Ensure protobuf compatibility
+
