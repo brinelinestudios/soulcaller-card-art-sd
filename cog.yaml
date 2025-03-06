@@ -6,11 +6,12 @@ build:
     - torch==2.1.2
     - torchvision==0.16.2
     - torchaudio==2.1.2
-    - diffusers==0.26.3
-    - transformers==4.34.0
-    - accelerate==0.25.0
-    - huggingface_hub>=0.20.2
     - safetensors==0.3.3
     - protobuf==4.23.4
+    - diffusers==0.26.3
+    - transformers==4.34.0
+    - huggingface_hub==0.20.2
+    - accelerate==0.25.0
+    - tokenizers==0.15.0
 
 predict: "predict.py:Predictor"
