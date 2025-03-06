@@ -45,10 +45,17 @@ class Predictor(BasePredictor):
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             print("✅ LoRA weights downloaded.")
+        else:
+            print("Using cached lora:")
 
-        print("🟡 Loading LoRA weights...")
-        self.pipe.unet.load_attn_procs(LORA_PATH)
-        print("✅ LoRA weights loaded successfully.")
+        try:
+            print("🟡 Attempting to load LoRA weights...")
+            self.pipe.unet.load_attn_procs(LORA_PATH)
+            print("✅ LoRA weights loaded successfully.")
+        except AttributeError as e:
+            print(f"❌ LoRA loading failed: {e}")
+            print("🔍 Possible Causes: Mismatched LoRA file, incompatible Diffusers version, or missing keys.")
+            print("🔧 Try re-downloading or converting the LoRA file.")
 
     def predict(self, 
                 prompt: str = Input(description="Prompt for image generation", default="A test image"),
