@@ -75,6 +75,8 @@ class Predictor(BasePredictor):
             # ✅ **UPLOAD IMAGE TO REPLICATE STORAGE**
             uploaded_path = Path(output_path).upload()
             print(f"🟢 Uploaded image: {uploaded_path}")
+            print("model version 1.0")
+
 
             return [uploaded_path]  # Returning as List[Path]
 
