@@ -6,6 +6,7 @@ from cog import BasePredictor, Input, Path
 import torch
 from diffusers import StableDiffusionXLPipeline
 from diffusers.utils import load_lora_into_pipeline
+from diffusers import load_lora_weights
 from safetensors.torch import load_file
 from huggingface_hub import snapshot_download
 
