@@ -2,7 +2,7 @@ numpy<2
 torch==2.1.2
 torchvision==0.16.2
 torchaudio==2.1.2
-diffusers==0.24.0  # Make sure this version is stable for LoRA
+diffusers>=0.21.0
 transformers==4.36.2
 accelerate==0.25.0
 huggingface_hub==0.19.4
