@@ -1,6 +1,7 @@
 from typing import List
 import os
 import requests
+import time
 from cog import BasePredictor, Input, Path
 import torch
 from diffusers import StableDiffusionXLPipeline
@@ -73,12 +74,21 @@ class Predictor(BasePredictor):
             print(f"✅ Image saved at {output_path}")
 
             # ✅ **UPLOAD IMAGE TO REPLICATE STORAGE**
-            uploaded_path = Path(output_path).upload()
-            print(f"🟢 Uploaded image: {uploaded_path}")
-            print("model version 1.0")
+            try:
+                print("🟡 Uploading image to Replicate storage...")
+                uploaded_path = Path(output_path).upload()
+                time.sleep(1)  # Ensure upload completes
 
+                if uploaded_path:
+                    print(f"🟢 Uploaded image: {uploaded_path}")
+                    return [uploaded_path]  # Return the uploaded image URL
+                else:
+                    print("❌ Upload failed! Returning local path instead.")
+                    return [Path(output_path)]  # Return local path as fallback
 
-            return [uploaded_path]  # Returning as List[Path]
+            except Exception as e:
+                print(f"❌ Exception during upload: {e}")
+                return [Path(output_path)]  # Fallback to local path
 
         except Exception as e:
             print(f"❌ Error during inference: {e}")
