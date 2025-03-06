@@ -5,7 +5,7 @@ import time
 from cog import BasePredictor, Input, Path
 import torch
 from diffusers import StableDiffusionXLPipeline
-from diffusers import AttnProcsLayers
+from diffusers.utils import load_lora_into_pipeline
 from safetensors.torch import load_file
 from huggingface_hub import snapshot_download
 
@@ -51,7 +51,7 @@ class Predictor(BasePredictor):
 
         try:
             print("🟡 Attempting to load LoRA weights...")
-            self.pipe.load_lora_weights(LORA_PATH)
+            load_lora_into_pipeline(self.pipe, LORA_PATH)
             print("✅ LoRA weights loaded successfully.")
         except AttributeError as e:
             print(f"❌ LoRA loading failed: {e}")
