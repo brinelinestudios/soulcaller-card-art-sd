@@ -9,3 +9,4 @@ accelerate==0.25.0
 tokenizers==0.15.0
 safetensors==0.3.3
 protobuf==4.23.4
+peft==0.8.2 
