@@ -2,12 +2,19 @@ import torch
 from diffusers import StableDiffusionXLPipeline
 from cog import BasePredictor, Input, Path
 from transformers import AutoModel
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, snapshot_download
 import logging
 import os
 
-# Define the base model and LoRA
-MODEL_NAME = "stabilityai/stable-diffusion-xl-base-1.0"
+# Define the new fine-tuned model (DreamShaperXL) as default
+MODEL_NAME = "Lykon/DreamShaperXL_Lightning"  # Fine-tuned SDXL for better imagination
+MODEL_CACHE = "./dreamshaperxl"  # Local cache path for the model
+
+# Keep the old model as a reference (commented out)
+# OLD_MODEL_NAME = "stabilityai/stable-diffusion-xl-base-1.0"
+# OLD_MODEL_CACHE = "./sdxl-model"
+
+# Define the LoRA model
 LORA_REPO = "dennis-brinelinestudios/soulcaller-lora"  # Correct namespace
 LORA_FILENAME = "SDXL_Inkdrawing_Directors_Cut_E.safetensors"
 
@@ -17,13 +24,33 @@ logging.basicConfig(level=logging.DEBUG)
 class Predictor(BasePredictor):
     def setup(self):
         """Load the model and apply LoRA"""
-        logging.info("🟡 Loading Stable Diffusion XL Model...")
-        self.pipe = StableDiffusionXLPipeline.from_pretrained(
-            MODEL_NAME, torch_dtype=torch.float16
-        )
-        self.pipe.to("cuda")
-        logging.info("🟢 Model loaded successfully.")
+        logging.info("🟡 Loading DreamShaperXL Model...")
+        
+        try:
+            # Load DreamShaperXL
+            if not os.path.exists(MODEL_CACHE):
+                logging.info("🟡 Downloading DreamShaperXL...")
+                model_path = snapshot_download(repo_id=MODEL_NAME, cache_dir=MODEL_CACHE)
+            else:
+                logging.info(f"🟢 Using cached model: {MODEL_CACHE}")
+                model_path = MODEL_CACHE
 
+            self.pipe = StableDiffusionXLPipeline.from_pretrained(
+                model_path, torch_dtype=torch.float16
+            )
+            self.pipe.to("cuda")
+            logging.info("🟢 DreamShaperXL model loaded successfully.")
+        
+        except Exception as e:
+            logging.error(f"❌ Failed to load DreamShaperXL, falling back to Base SDXL: {e}")
+            # Fallback to base SDXL model
+            model_path = snapshot_download(repo_id="stabilityai/stable-diffusion-xl-base-1.0", cache_dir="./sdxl-model")
+            self.pipe = StableDiffusionXLPipeline.from_pretrained(
+                model_path, torch_dtype=torch.float16
+            )
+            self.pipe.to("cuda")
+            logging.info("🟢 Base SDXL model loaded as fallback.")
+        
         # **Download the LoRA model correctly**
         logging.info(f"🟡 Downloading LoRA weights from {LORA_REPO}...")
         try:
