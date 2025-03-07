@@ -1,33 +1,42 @@
 import torch
 from diffusers import StableDiffusionXLPipeline
 from cog import BasePredictor, Input, Path
-from transformers import CLIPImageProcessor
-import requests
-from io import BytesIO
-from PIL import Image
+from transformers import AutoModel
+from huggingface_hub import hf_hub_download
+import logging
+import os
 
+# Define the base model and LoRA
 MODEL_NAME = "stabilityai/stable-diffusion-xl-base-1.0"
-LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
+LORA_REPO = "dennis-brinelinestudios/soulcaller-lora"  # Correct namespace
+LORA_FILENAME = "SDXL_Inkdrawing_Directors_Cut_E.safetensors"
+
+# Enable logging
+logging.basicConfig(level=logging.DEBUG)
 
 class Predictor(BasePredictor):
     def setup(self):
-        """Load the model into memory for efficient processing with LoRA support"""
-        print("🟡 Loading Stable Diffusion XL...")
+        """Load the model and apply LoRA"""
+        logging.info("🟡 Loading Stable Diffusion XL Model...")
         self.pipe = StableDiffusionXLPipeline.from_pretrained(
             MODEL_NAME, torch_dtype=torch.float16
         )
         self.pipe.to("cuda")
-        print("🟢 Model loaded successfully.")
-        
-        # Load LoRA weights
-        print(f"🟡 Loading LoRA from {LORA_URL}...")
-        self.pipe.load_lora_weights(LORA_URL, weight_name="pytorch_lora_weights.safetensors", alpha=1.5)
-        
-        # Apply LoRA explicitly
-        self.pipe.fuse_lora()
-        
-        # ✅ Debug: Check if LoRA layers are applied
-        print(f"🟢 LoRA Layers Loaded: {self.pipe.unet.attn_processors}")
+        logging.info("🟢 Model loaded successfully.")
+
+        # **Download the LoRA model correctly**
+        logging.info(f"🟡 Downloading LoRA weights from {LORA_REPO}...")
+        try:
+            lora_path = hf_hub_download(repo_id=LORA_REPO, filename=LORA_FILENAME)
+            logging.info(f"🟢 LoRA weights downloaded to: {lora_path}")
+        except Exception as e:
+            logging.error(f"❌ Failed to download LoRA weights: {e}")
+            raise e
+
+        # **Load LoRA weights with increased strength**
+        logging.info("🟡 Applying LoRA weights with alpha=2.0...")
+        self.pipe.load_lora_weights(lora_path, weight_name="pytorch_lora_weights.safetensors", alpha=2.0)
+        logging.info("🟢 LoRA successfully applied.")
 
     def predict(
         self,
@@ -38,8 +47,9 @@ class Predictor(BasePredictor):
         seed: int = Input(description="Seed for reproducibility", default=42),
     ) -> Path:
         """Run a prediction"""
-        print(f"🟡 Generating image with prompt: {prompt}")
         generator = torch.manual_seed(seed)
+        logging.info(f"🟡 Running inference: '{prompt}'")
+        
         output = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -50,17 +60,6 @@ class Predictor(BasePredictor):
         
         output_path = "/tmp/output.png"
         output.save(output_path)
-        print(f"🟢 Image generated successfully and saved to {output_path}")
-        
-        # ✅ Upload output to Hugging Face for accessibility
-        try:
-            with open(output_path, "rb") as img_file:
-                response = requests.post("https://huggingface.co/api/upload", files={"file": img_file})
-                if response.status_code == 200:
-                    print(f"🟢 Uploaded image successfully: {response.json()}")
-                else:
-                    print(f"❌ Upload failed: {response.text}")
-        except Exception as e:
-            print(f"❌ Upload error: {e}")
-        
+        logging.info(f"🟢 Image saved to {output_path}")
+
         return Path(output_path)
