@@ -1,100 +1,66 @@
-from typing import List
-import os
-import requests
-import time
-from cog import BasePredictor, Input, Path
 import torch
 from diffusers import StableDiffusionXLPipeline
-from transformers import AutoModel
-from peft import LoraConfig
+from cog import BasePredictor, Input, Path
+from transformers import CLIPImageProcessor
+import requests
+from io import BytesIO
+from PIL import Image
+
+MODEL_NAME = "stabilityai/stable-diffusion-xl-base-1.0"
+LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
 
 class Predictor(BasePredictor):
     def setup(self):
-        """Optimized Model Setup: Faster Boot, Lower Memory Usage"""
-
-        MODEL_NAME = "stabilityai/stable-diffusion-xl-base-1.0"
-        LORA_PATH = "./SDXL_Inkdrawing_Directors_Cut_E.safetensors"
-        LORA_URL = "https://huggingface.co/dennis-brinelinestudios/soulcaller-lora/resolve/main/SDXL_Inkdrawing_Directors_Cut_E.safetensors"
-
-        # Load base model
+        """Load the model into memory for efficient processing with LoRA support"""
+        print("🟡 Loading Stable Diffusion XL...")
         self.pipe = StableDiffusionXLPipeline.from_pretrained(
-            MODEL_NAME,
-            torch_dtype=torch.float16,
+            MODEL_NAME, torch_dtype=torch.float16
         )
         self.pipe.to("cuda")
-        print("✅ Base model loaded successfully.")
+        print("🟢 Model loaded successfully.")
+        
+        # Load LoRA weights
+        print(f"🟡 Loading LoRA from {LORA_URL}...")
+        self.pipe.load_lora_weights(LORA_URL, weight_name="pytorch_lora_weights.safetensors", alpha=1.5)
+        
+        # Apply LoRA explicitly
+        self.pipe.fuse_lora()
+        
+        # ✅ Debug: Check if LoRA layers are applied
+        print(f"🟢 LoRA Layers Loaded: {self.pipe.unet.attn_processors}")
 
-        # Download and load LoRA
-        if not os.path.exists(LORA_PATH):
-            print(f"🟡 Downloading LoRA weights from {LORA_URL}...")
-            response = requests.get(LORA_URL, stream=True)
-            with open(LORA_PATH, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            print("✅ LoRA weights downloaded.")
-        else:
-            print("🟢 Using cached LoRA weights.")
-
+    def predict(
+        self,
+        prompt: str = Input(description="Input prompt for the model"),
+        negative_prompt: str = Input(description="Negative prompt", default=""),
+        guidance_scale: float = Input(description="Scale for classifier-free guidance", default=7.5),
+        num_inference_steps: int = Input(description="Number of inference steps", default=50),
+        seed: int = Input(description="Seed for reproducibility", default=42),
+    ) -> Path:
+        """Run a prediction"""
+        print(f"🟡 Generating image with prompt: {prompt}")
+        generator = torch.manual_seed(seed)
+        output = self.pipe(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            guidance_scale=guidance_scale,
+            num_inference_steps=num_inference_steps,
+            generator=generator,
+        ).images[0]
+        
+        output_path = "/tmp/output.png"
+        output.save(output_path)
+        print(f"🟢 Image generated successfully and saved to {output_path}")
+        
+        # ✅ Upload output to Hugging Face for accessibility
         try:
-            print("🟡 Loading LoRA weights using transformers...")
-            lora_config = LoraConfig(
-                r=16,
-                lora_alpha=32,
-                target_modules=[AutoModel],
-                lora_dropout=0.1,
-                bias="none"
-            )
-
-            self.pipe = AutoModel.from_pretrained(
-                MODEL_NAME,
-                config=lora_config,
-                load_lora_weights=True
-            )
-            print("✅ LoRA weights loaded successfully.")
-
-        except Exception as e:
-            print(f"❌ LoRA loading failed: {e}")
-
-    def predict(self, 
-                prompt: str = Input(description="Prompt for image generation", default="A test image"),
-                steps: int = Input(description="Number of inference steps", default=30)) -> List[Path]:
-        """
-        Run the image generation model with the given prompt and steps.
-        Returns a **publicly accessible URL** of the generated image.
-        """
-        print(f"🟡 Running inference with prompt: '{prompt}', steps: {steps}")
-
-        try:
-            # Generate image
-            output = self.pipe(prompt, num_inference_steps=steps)
-            print("✅ Model executed successfully.")
-
-            # Extract image from pipeline output
-            output_image = output.images[0]
-            print("✅ Image extracted from model output.")
-
-            # Define output path
-            output_path = "/tmp/output.png"
-            output_image.save(output_path)
-            print(f"✅ Image saved at {output_path}")
-
-            # ✅ **UPLOAD IMAGE TO REPLICATE STORAGE**
-            try:
-                print("🟡 Uploading image to Replicate storage...")
-                uploaded_path = Path(output_path).upload()
-                time.sleep(1)  # Ensure upload completes
-
-                if uploaded_path:
-                    print(f"🟢 Uploaded image: {uploaded_path}")
-                    return [uploaded_path]  # Return the uploaded image URL
+            with open(output_path, "rb") as img_file:
+                response = requests.post("https://huggingface.co/api/upload", files={"file": img_file})
+                if response.status_code == 200:
+                    print(f"🟢 Uploaded image successfully: {response.json()}")
                 else:
-                    print("❌ Upload failed! Returning local path instead.")
-                    return [Path(output_path)]  # Return local path as fallback
-
-            except Exception as e:
-                print(f"❌ Exception during upload: {e}")
-                return [Path(output_path)]  # Fallback to local path
-
+                    print(f"❌ Upload failed: {response.text}")
         except Exception as e:
-            print(f"❌ Error during inference: {e}")
-            return []
+            print(f"❌ Upload error: {e}")
+        
+        return Path(output_path)
