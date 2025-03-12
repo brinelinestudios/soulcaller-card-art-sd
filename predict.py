@@ -7,7 +7,8 @@ import logging
 import os
 
 # Define the new fine-tuned model (DreamShaperXL) as default
-MODEL_NAME = "Lykon/DreamShaperXL_Lightning"  # Fine-tuned SDXL for better imagination
+#MODEL_NAME = "Lykon/DreamShaperXL_Lightning"  # Fine-tuned SDXL for better imagination
+MODEL_NAME = "lykon/dreamshaper-xl-1-0"
 MODEL_CACHE = "./dreamshaperxl"  # Local cache path for the model
 
 # Keep the old model as a reference (commented out)
