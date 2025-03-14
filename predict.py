@@ -68,10 +68,10 @@ class Predictor(BasePredictor):
 
     def predict(
         self,
-        prompt: str = Input(description="Input prompt for the model", default="A low-detail colored ink drawing of a tcg [Card Type] named: [Carad Name], description: [User Description]"),
+        prompt: str = Input(description="Input prompt for the model", default="A low-detail colored ink drawing of a tcg [Card Type] named: [Card Name], description: [User Description]"),
         negative_prompt: str = Input(description="Negative prompt", default="excessive shading, detailed background, realism, clutter"),
-        guidance_scale: float = Input(description="Scale for classifier-free guidance", default=7.5),
-        num_inference_steps: int = Input(description="Number of inference steps", default=50),
+        guidance_scale: float = Input(description="Scale for classifier-free guidance", default=9),
+        num_inference_steps: int = Input(description="Number of inference steps", default=25),
         seed: int = Input(description="Seed for reproducibility", default=42),
     ) -> Path:
         """Run a prediction"""
